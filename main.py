@@ -15,13 +15,13 @@ pygame.display.set_caption("Pathfinder Visualizer")
 COLORS = {"ORANGE": (255, 165, 0), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0)}
 
 
-# The Graph class will be used to organize all the tile objects in one place and simulate the visualization process
+# The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
 class Graph(object):
 
     # Initialize the squares
-    def __init(self, dest_pos, start_pos=(0, 0)):
+    def __init__(self, dest_pos: tuple, start_pos=(0, 0)):
         self.nodes = []
-        self.visited_nodes = set()
+        self.visited_nodes = []
         self.start_pos = start_pos
         self.dest_pos = dest_pos
 
@@ -32,9 +32,40 @@ class Graph(object):
 
     # Finds the shortest path to the destination using Dijkstra's algorithm
     def dijkstra_solve(self):
+        # # GOALS
         # Start solving from the start_position
         # Once the destination is reached, map the shortest route in red color
-        pass
+
+        # Begin algorithm
+        dists = {(v.r, v.c): float('inf') for v in self.nodes}
+        dists[self.start_pos] = 0
+
+        pq = PriorityQueue()
+        pq.put((0, self.start_pos))
+
+        while not pq.empty():
+            # Get the closest possible vertex
+            (dist, current_vertex) = pq.get()
+            # Check if it is a wall and if so skip over it
+            if current_vertex.wall_status():
+                continue
+            # Append the node to the visited nodes
+            self.visited_nodes.append(current_vertex)
+
+            # Get the neighbors of the current node and iterate over them
+            for neighbor in self.get_adj_tiles(current_vertex.r, current_vertex.c):
+                # If the neighbor hasn't already been visited and isn't a wall begin comparing the older and newer costs
+                if neighbor not in self.visited_nodes and not neighbor.wall_status():
+                    old_distance = dists[neighbor]
+                    new_distance = dists[current_vertex] + 1
+                    # If the new distance is smaller than the original cost put the neighbor in the priority queue with
+                    # the new distance cost
+                    if new_distance < old_distance:
+                        # Update the color of the neighbor
+                        neighbor.change_color((0, 255, 0))
+                        pq.put((new_distance, neighbor))
+                        dists[neighbor] = new_distance
+        return dists
 
     def get_adj_tiles(self, r, c) -> list:
         """
@@ -100,10 +131,6 @@ class Node(object):
 
     def wall_status(self):
         return self.is_wall
-
-    def update_cost(self):
-        pass
-
 
 def play():
     dest_row = int(input("Type a row index between n and m inclusive for the destination's row index: "))
