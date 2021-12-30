@@ -14,35 +14,39 @@ pygame.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 800
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
-COLORS = {"ORANGE": (255, 165, 0), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0)}
+COLORS = {"NAVY": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
+          "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
+
+# Drag variable for walls
+drag = False
 
 
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
 class Graph(object):
 
     # Initialize the squares
-    def __init__(self, dest_pos: tuple, start_pos=(0, 0)):
+    def __init__(self, dest_pos: tuple, start_pos=(5, 5)):
         self.nodes = []
         self.visited_nodes = []
         self.start_pos = start_pos
         self.dest_pos = dest_pos
 
-        start_x = 0
-        start_y = 5
+        x = 0
+        y = 5
         for n in range(41):
             row = []
             for c in range(41):
                 if (n, c) == start_pos:
-                    row.append((Node(n, c, start_x, start_y, 20, 20, start=True)))
+                    row.append((Node(n, c, x, y, 20, 20, start=True)))
                 elif (n, c) == dest_pos:
-                    row.append((Node(n, c, start_x, start_y, 20, 20, dest=True)))
+                    row.append((Node(n, c, x, y, 20, 20, dest=True)))
                 else:
-                    row.append((Node(n, c, start_x, start_y, 20, 20)))
+                    row.append((Node(n, c, x, y, 20, 20)))
 
-                start_x += 25
+                x += 25
             self.nodes.append(row)
-            start_x = 0
-            start_y += 25
+            x = 0
+            y += 25
 
     # Draw the grid
     def draw(self, s):
@@ -50,10 +54,12 @@ class Graph(object):
             for n in row:
                 n.draw(s)
 
-    # Creates two lists: one of the distances and of the preceding nodes for each respective node
-    # and backtracks to find the shortest path
-    def dijkstra_solve(self):
-        # # GOALS
+    def dijkstra_solve(self) -> bool:
+        """
+        Creates two lists: one of the distances and of the preceding nodes for each respective node
+        and backtracks to find the shortest path
+        :return: True if a path could be found, otherwise False
+        """
         # Start solving from the start_position
         # Once the destination is reached, map the shortest route in red color
 
@@ -70,28 +76,34 @@ class Graph(object):
         pq = PriorityQueue()
         pq.put((0, self.start_pos))
 
+        found = False
         # While the priority queue is not empty
         while not pq.empty():
             # Get the vertex with the lowest cost
             dist, current_vertex = pq.get()
+            node = self.nodes[current_vertex[0]][current_vertex[1]]
+            node.change_color(COLORS["FOUND"])
+            node.draw(screen)
             # Check if it is a wall and if so skip over it
             if self.nodes[current_vertex[0]][current_vertex[1]].wall_status():
                 continue
             # Get the neighbors of the current node and iterate over them
-            for neighbor in self.get_adj_tiles(current_vertex[0], current_vertex[1]):
+            neighbors = self.get_adj_tiles(current_vertex[0], current_vertex[1])
+            for neighbor in neighbors:
                 # If the neighbor is a wall skip over it
                 if neighbor.wall_status():
                     continue
 
+                if (neighbor.r, neighbor.c) == self.dest_pos:
+                    found = True
                 old_distance = dists[(neighbor.r, neighbor.c)]
                 new_distance = dists[current_vertex] + 1
                 # If the new distance is smaller than the original cost put the neighbor in the priority queue with
                 # the new distance cost
                 if new_distance < old_distance:
                     # Update the color of the neighbor
-                    time.sleep(.001)
-                    if not(neighbor.start or neighbor.dest):
-                        neighbor.change_color((0, 255, 0))
+                    time.sleep(.005)
+                    neighbor.change_color(COLORS["FRONTIER"])
                     neighbor.draw(screen)
                     # Update the fastest route of the neighbor
                     prevs[(neighbor.r, neighbor.c)] = current_vertex
@@ -103,9 +115,13 @@ class Graph(object):
         coors = prevs[self.dest_pos]
         while coors:
             node = self.nodes[coors[0]][coors[1]]
-            node.change_color(COLORS["RED"])
+            node.draw(screen)
+            time.sleep(.05)
+            node.change_color(COLORS["PATH"])
+            node.draw(screen)
             coors = prevs[coors]
-        #return self.nodes[self.dest_pos[0]][self.dest_pos[1]].fastest_route
+
+        return found
 
     def get_adj_tiles(self, r, c) -> list:
         """
@@ -125,10 +141,11 @@ class Graph(object):
         return adjacent
 
 
-# The Node class will be used to handle the events of clicks, to generate walls, to signify if a node will be a
-# destination, to store the least "costly" path
 class Node(object):
-
+    """
+    The Node class will be used to handle the events of clicks, to generate walls, to signify if a node will be a
+    destination, to store the least "costly" path
+    """
     def __init__(self, r: int, c: int, x: float, y: float, width: float, height: float, start=False, dest=False):
         self.r = r
         self.c = c
@@ -136,7 +153,7 @@ class Node(object):
         self.dest = dest
         self.start = start
         if start or dest:
-            self.sq_color = COLORS["ORANGE"]
+            self.sq_color = COLORS["NAVY"]
         else:
             self.sq_color = COLORS["WHITE"]
         self.is_wall = False
@@ -147,19 +164,25 @@ class Node(object):
         :param event: a pygame event
         :return: None
         """
+        global drag
         # Check if there is a mouse click directly on one of the nodes
         if event.type == pygame.MOUSEBUTTONDOWN and not self.start:
             # If it's in the grid and not the start or dest position
-            if self.rect.collidepoint(event.pos):
-                self.is_wall = True
-                self.sq_color = COLORS["BLACK"]
+            drag = True
+        # Check if the mouse is no longer clicked at which point drag is no longer true
+        if event.type == pygame.MOUSEBUTTONUP:
+            drag = False
 
     def draw(self, s: pygame.surface) -> None:
         """
-        Draws the tile onto the window with the specific color
+        Draws the tile onto the window with the specific color or as a wall tile if drag has been toggled
         :param s: pygame surface to draw on
         :return: None
         """
+        if drag and self.rect.collidepoint(pygame.mouse.get_pos()):
+            self.is_wall = True
+            self.sq_color = COLORS["BLACK"]
+
         pygame.draw.rect(s, self.sq_color, self.rect)
         pygame.display.update(self.rect)
 
@@ -169,13 +192,11 @@ class Node(object):
         :param color: 3 digit tuple representing RGB value
         :return: None
         """
-        self.sq_color = color
+        if not (self.start or self.dest):
+            self.sq_color = color
 
     def wall_status(self):
         return self.is_wall
-
-    def __repr__(self):
-        return f"Row: {self.r}, Col: {self.c}"
 
 
 def play():
@@ -187,7 +208,10 @@ def play():
 
     # Game loop
     clock = pygame.time.Clock()
-    while True:
+    # Sentinel variable
+    run = True
+    reached = False
+    while run:
 
         # Check for events
         for event in pygame.event.get():
@@ -196,13 +220,22 @@ def play():
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    print(g.dijkstra_solve())
+                    reached = g.dijkstra_solve()
+                    run = False
             for row in g.nodes:
                 for node in row:
                     node.handle_event(event)
         g.draw(screen)
-
         clock.tick(30)
+
+        # Wait 10 seconds after the destination has been found
+        if not run:
+            time.sleep(7)
+
+    if reached:
+        print("A minimum path was found")
+    else:
+        print("A minimum path was NOT found")
 
 
 if __name__ == '__main__':
