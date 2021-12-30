@@ -3,6 +3,8 @@
 # by Furkan Ercevik
 # Started 4 November 2021
 #
+import time
+
 import pygame
 import sys
 from queue import PriorityQueue
@@ -12,7 +14,7 @@ pygame.init()
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 800
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
-COLORS = {"ORANGE": (255, 165, 0), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0)}
+COLORS = {"ORANGE": (255, 165, 0), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0)}
 
 
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
@@ -25,47 +27,85 @@ class Graph(object):
         self.start_pos = start_pos
         self.dest_pos = dest_pos
 
-    # Draw the grid
-    def draw(self):
-        for n in self.nodes:
-            n.draw()
+        start_x = 0
+        start_y = 5
+        for n in range(41):
+            row = []
+            for c in range(41):
+                if (n, c) == start_pos:
+                    row.append((Node(n, c, start_x, start_y, 20, 20, start=True)))
+                elif (n, c) == dest_pos:
+                    row.append((Node(n, c, start_x, start_y, 20, 20, dest=True)))
+                else:
+                    row.append((Node(n, c, start_x, start_y, 20, 20)))
 
-    # Finds the shortest path to the destination using Dijkstra's algorithm
+                start_x += 25
+            self.nodes.append(row)
+            start_x = 0
+            start_y += 25
+
+    # Draw the grid
+    def draw(self, s):
+        for row in self.nodes:
+            for n in row:
+                n.draw(s)
+
+    # Creates two lists: one of the distances and of the preceding nodes for each respective node
+    # and backtracks to find the shortest path
     def dijkstra_solve(self):
         # # GOALS
         # Start solving from the start_position
         # Once the destination is reached, map the shortest route in red color
 
-        # Begin algorithm
-        dists = {(v.r, v.c): float('inf') for v in self.nodes}
+        # Create a dictionary of all the distances
+        # Create a dictionary of all the previous nodes
+        dists = {}
+        prevs = {}
+        for r, row in enumerate(self.nodes):
+            for c, col in enumerate(row):
+                dists[(r, c)] = float('inf')
+                prevs[(r, c)] = None
         dists[self.start_pos] = 0
-
+        # Start the priority queue
         pq = PriorityQueue()
         pq.put((0, self.start_pos))
 
+        # While the priority queue is not empty
         while not pq.empty():
-            # Get the closest possible vertex
-            (dist, current_vertex) = pq.get()
+            # Get the vertex with the lowest cost
+            dist, current_vertex = pq.get()
             # Check if it is a wall and if so skip over it
-            if current_vertex.wall_status():
+            if self.nodes[current_vertex[0]][current_vertex[1]].wall_status():
                 continue
-            # Append the node to the visited nodes
-            self.visited_nodes.append(current_vertex)
-
             # Get the neighbors of the current node and iterate over them
-            for neighbor in self.get_adj_tiles(current_vertex.r, current_vertex.c):
-                # If the neighbor hasn't already been visited and isn't a wall begin comparing the older and newer costs
-                if neighbor not in self.visited_nodes and not neighbor.wall_status():
-                    old_distance = dists[neighbor]
-                    new_distance = dists[current_vertex] + 1
-                    # If the new distance is smaller than the original cost put the neighbor in the priority queue with
-                    # the new distance cost
-                    if new_distance < old_distance:
-                        # Update the color of the neighbor
+            for neighbor in self.get_adj_tiles(current_vertex[0], current_vertex[1]):
+                # If the neighbor is a wall skip over it
+                if neighbor.wall_status():
+                    continue
+
+                old_distance = dists[(neighbor.r, neighbor.c)]
+                new_distance = dists[current_vertex] + 1
+                # If the new distance is smaller than the original cost put the neighbor in the priority queue with
+                # the new distance cost
+                if new_distance < old_distance:
+                    # Update the color of the neighbor
+                    time.sleep(.001)
+                    if not(neighbor.start or neighbor.dest):
                         neighbor.change_color((0, 255, 0))
-                        pq.put((new_distance, neighbor))
-                        dists[neighbor] = new_distance
-        return dists
+                    neighbor.draw(screen)
+                    # Update the fastest route of the neighbor
+                    prevs[(neighbor.r, neighbor.c)] = current_vertex
+
+                    pq.put((new_distance, (neighbor.r, neighbor.c)))
+                    dists[(neighbor.r, neighbor.c)] = new_distance
+
+        # Backtrack from destination node
+        coors = prevs[self.dest_pos]
+        while coors:
+            node = self.nodes[coors[0]][coors[1]]
+            node.change_color(COLORS["RED"])
+            coors = prevs[coors]
+        #return self.nodes[self.dest_pos[0]][self.dest_pos[1]].fastest_route
 
     def get_adj_tiles(self, r, c) -> list:
         """
@@ -75,12 +115,13 @@ class Graph(object):
         :return: list of adjacent nodes
         """
         adjacent = []
-        for row in range(len(self.nodes)):
-            for col in range(len(self.nodes[row])):
-                # If the tile isn't a wall
-                if not self.nodes[row][col].wall_status() and (abs(row - r) <= 1 or abs(col - c) <= 1):
-                    adjacent.append(self.nodes[row][col])
-        adjacent.remove(self.nodes[r][c])
+        possible_coors = [
+            (r+1, c), (r, c-1), (r, c+1), (r-1, c)
+        ]
+        for row, col in possible_coors:
+            if row in [-1, len(self.nodes)] or col in [-1, len(self.nodes)]:
+                continue
+            adjacent.append(self.nodes[row][col])
         return adjacent
 
 
@@ -92,12 +133,13 @@ class Node(object):
         self.r = r
         self.c = c
         self.rect = pygame.rect.Rect(x, y, width, height)
-        self.sq_color = COLORS["WHITE"] if not (start or dest) else COLORS["ORANGE"]
-        # If the square is a destination square set the found attr to False initially, otherwise set it to None
-        self.found = False if dest else None
+        self.dest = dest
+        self.start = start
+        if start or dest:
+            self.sq_color = COLORS["ORANGE"]
+        else:
+            self.sq_color = COLORS["WHITE"]
         self.is_wall = False
-        self.fastest_route = set()
-        self.cost = float("inf") if not start else 0
 
     def handle_event(self, event: pygame.event) -> None:
         """
@@ -106,8 +148,8 @@ class Node(object):
         :return: None
         """
         # Check if there is a mouse click directly on one of the nodes
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            # If it's in the grid
+        if event.type == pygame.MOUSEBUTTONDOWN and not self.start:
+            # If it's in the grid and not the start or dest position
             if self.rect.collidepoint(event.pos):
                 self.is_wall = True
                 self.sq_color = COLORS["BLACK"]
@@ -132,9 +174,13 @@ class Node(object):
     def wall_status(self):
         return self.is_wall
 
+    def __repr__(self):
+        return f"Row: {self.r}, Col: {self.c}"
+
+
 def play():
-    dest_row = int(input("Type a row index between n and m inclusive for the destination's row index: "))
-    dest_col = int(input("Type a row index between n and m inclusive for the destination's column index: "))
+    dest_row = 20
+    dest_col = 20
 
     # Initialize the grid
     g = Graph((dest_row, dest_col))
@@ -148,6 +194,13 @@ def play():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    print(g.dijkstra_solve())
+            for row in g.nodes:
+                for node in row:
+                    node.handle_event(event)
+        g.draw(screen)
 
         clock.tick(30)
 
