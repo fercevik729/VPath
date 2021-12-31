@@ -4,21 +4,23 @@
 # Started 4 November 2021
 #
 import time
-
 import pygame
 import sys
 from queue import PriorityQueue
 
-# CONSTANTS
+# CONSTANTS + SETUP
 pygame.init()
+LOGO = pygame.image.load("assets/magnifying.png")
+pygame.display.set_icon(LOGO)
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 800
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
 COLORS = {"NAVY": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
 
-# Drag variable for walls
+# Drag variables for walls
 drag = False
+clear_drag = False
 
 
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
@@ -149,6 +151,10 @@ class Node(object):
     def __init__(self, r: int, c: int, x: float, y: float, width: float, height: float, start=False, dest=False):
         self.r = r
         self.c = c
+        self.x = x
+        self.y = y
+        self.w = width
+        self.h = height
         self.rect = pygame.rect.Rect(x, y, width, height)
         self.dest = dest
         self.start = start
@@ -165,13 +171,19 @@ class Node(object):
         :return: None
         """
         global drag
+        global clear_drag
         # Check if there is a mouse click directly on one of the nodes
-        if event.type == pygame.MOUSEBUTTONDOWN and not self.start:
-            # If it's in the grid and not the start or dest position
-            drag = True
+        if event.type == pygame.MOUSEBUTTONDOWN and not (self.start or self.dest) and self.rect.collidepoint(pygame.mouse.get_pos()):
+            if event.button == pygame.BUTTON_LEFT:
+                # If the mouse button was the left button enable wall status for the selected node
+                drag = True
+            elif event.button == pygame.BUTTON_RIGHT:
+                # If the mouse button was the right button disable wall status for the selected node
+                clear_drag = True
         # Check if the mouse is no longer clicked at which point drag is no longer true
         if event.type == pygame.MOUSEBUTTONUP:
             drag = False
+            clear_drag = False
 
     def draw(self, s: pygame.surface) -> None:
         """
@@ -180,10 +192,20 @@ class Node(object):
         :return: None
         """
         if drag and self.rect.collidepoint(pygame.mouse.get_pos()):
+            # If the drag variable is enabled, enable the wall status of this tile
             self.is_wall = True
             self.sq_color = COLORS["BLACK"]
 
-        pygame.draw.rect(s, self.sq_color, self.rect)
+        if clear_drag and self.rect.collidepoint(pygame.mouse.get_pos()):
+            # If the clear drag variable is enabled, disable the wall status of this tile
+            self.is_wall = False
+            self.sq_color = COLORS["WHITE"]
+
+        if self.sq_color == COLORS["FRONTIER"]:
+            # If the square is a "frontier" square draw a circle in that cell
+            pygame.draw.circle(s, self.sq_color, (self.x + self.w//2, self.y + self.h//2), 8)
+        else:
+            pygame.draw.rect(s, self.sq_color, self.rect)
         pygame.display.update(self.rect)
 
     def change_color(self, color: tuple) -> None:
