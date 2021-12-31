@@ -1,5 +1,5 @@
-# Dijkstra-s-Visualizer
-This is a simple pathfinder visualizer that utilizes Dijkstra's algorithm or the optimized A* algorithm to display the shortest possible path to a destination node from a starting node.
+# VPath
+This is a simple pathfinder visualization program that utilizes Dijkstra's algorithm and the optimized A* algorithm to display the shortest possible path to a destination node from a starting node.
 
 
 ## Instructions
