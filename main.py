@@ -199,6 +199,10 @@ class Graph(object):
         return adjacent
 
     def a_star_solve(self):
+        """
+        Using heuristics, this method solves the graph and calls a helper function to backtrack from the solution
+        :return:
+        """
         # If there is no start or end node specified return False
         if not self.start_pos or not self.dest_pos:
             return False
@@ -266,6 +270,28 @@ class Graph(object):
             coors = prevs[coors]
 
 
+def handle_event(event: pygame.event) -> None:
+    """
+    Handles the mouseclick event specifically for a node object
+    :param event: a pygame event
+    :return: None
+    """
+    global drag
+    global clear_drag
+    # Check if there is a mouse click directly on one of the nodes
+    if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.button == pygame.BUTTON_LEFT:
+            # If the mouse button was the left button enable wall status for the selected node
+            drag = True
+        elif event.button == pygame.BUTTON_RIGHT:
+            # If the mouse button was the right button disable wall status for the selected node
+            clear_drag = True
+    # Check if the mouse is no longer clicked at which point drag is no longer true
+    if event.type == pygame.MOUSEBUTTONUP:
+        drag = False
+        clear_drag = False
+
+
 class Node(object):
     """
     The Node class will be used to handle the events of clicks, to generate walls, to signify if a node will be a
@@ -292,27 +318,6 @@ class Node(object):
         self.start = False
         self.dest = False
         self.is_wall = False
-
-    def handle_event(self, event: pygame.event) -> None:
-        """
-        Handles the mouseclick event specifically for a node object
-        :param event: a pygame event
-        :return: None
-        """
-        global drag
-        global clear_drag
-        # Check if there is a mouse click directly on one of the nodes
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == pygame.BUTTON_LEFT:
-                # If the mouse button was the left button enable wall status for the selected node
-                drag = True
-            elif event.button == pygame.BUTTON_RIGHT:
-                # If the mouse button was the right button disable wall status for the selected node
-                clear_drag = True
-        # Check if the mouse is no longer clicked at which point drag is no longer true
-        if event.type == pygame.MOUSEBUTTONUP:
-            drag = False
-            clear_drag = False
 
     def draw(self, s: pygame.surface) -> None:
         """
@@ -384,6 +389,7 @@ def play() -> None:
     Game loop for the pathfinder visualizer
     :return: None
     """
+    instructions()
     # Initialize the grid
     g = Graph()
     # Game loop
@@ -402,10 +408,9 @@ def play() -> None:
             # Let the graph handle the event
             g.handle_event(event)
 
-            # Let the nodes in the graph handle the event
-            for row in g.nodes:
-                for node in row:
-                    node.handle_event(event)
+            # Let the program statically handle the event
+            handle_event(event)
+
         g.draw(screen)
         clock.tick(30)
 
@@ -416,7 +421,7 @@ def instructions() -> None:
     :return: None
     """
     print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
-    print("|    Welcome to my Pathfinder Visualizer!!    |")
+    print("|              Welcome to VPath               |")
     print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
     print("|                 CONTROLS                    |")
     print("|     L-MOUSECLICK + DRAG = ENABLE A WALL     |")
@@ -432,5 +437,4 @@ def instructions() -> None:
 
 
 if __name__ == '__main__':
-    instructions()
     play()
