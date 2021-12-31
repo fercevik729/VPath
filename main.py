@@ -17,7 +17,7 @@ screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
 COLORS = {"START": (10, 17, 114), "DEST": (88, 139, 174), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
-
+DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.002}
 # Global variables
 drag = False
 clear_drag = False
@@ -66,7 +66,18 @@ class Graph(object):
 
                 n.force_color_change(COLORS["WHITE"])
 
-    def handle_event(self, event: pygame.event):
+    def clear_visualization(self) -> None:
+        """
+        Clears the visualization, returning it to the prior state of the Graph
+        :return: None
+        """
+        for r, row in enumerate(self.nodes):
+            for c, col in enumerate(row):
+                n = self.nodes[r][c]
+                if not n.wall_status():
+                    n.change_color(COLORS["WHITE"])
+
+    def handle_event(self, event: pygame.event) -> None:
         """
         Graph checks if certain keys are pressed and performs actions accordingly
         :param event:
@@ -80,6 +91,8 @@ class Graph(object):
                 self.dijkstra_solve()
             if event.key == pygame.K_a:
                 self.a_star_solve()
+            if event.key == pygame.K_v:
+                self.clear_visualization()
             if event.key == pygame.K_s:
                 x, y = pygame.mouse.get_pos()
                 if x in range(0, 1025) and y in range(0,1025):
@@ -134,7 +147,6 @@ class Graph(object):
         pq = PriorityQueue()
         pq.put((0, self.start_pos))
 
-        found = False
         # While the priority queue is not empty
         while not pq.empty():
             # Get the vertex with the lowest cost
@@ -148,15 +160,13 @@ class Graph(object):
             # Get the neighbors of the current node and iterate over them
             neighbors = self.get_adj_nodes(current_vertex[0], current_vertex[1])
             for neighbor in neighbors:
-                if (neighbor.r, neighbor.c) == self.dest_pos:
-                    found = True
                 old_distance = dists[(neighbor.r, neighbor.c)]
                 new_distance = dists[current_vertex] + 1
                 # If the new distance is smaller than the original cost put the neighbor in the priority queue with
                 # the new distance cost
                 if new_distance < old_distance:
                     # Update the color of the neighbor
-                    time.sleep(.005)
+                    time.sleep(DELAYS["DIJKSTRA"])
                     neighbor.change_color(COLORS["FRONTIER"])
                     neighbor.draw(screen)
                     # Update the fastest route of the neighbor
@@ -231,7 +241,7 @@ class Graph(object):
                     prevs[(n.r, n.c)] = current_vertex
 
                     # Draw the neighbor node
-                    time.sleep(0.008)
+                    time.sleep(DELAYS["A-STAR"])
                     n.change_color(COLORS["FRONTIER"])
                     n.draw(screen)
 
@@ -367,14 +377,16 @@ class Node(object):
         self.is_wall = not self.is_wall
 
 
-def play():
+def play() -> None:
+    """
+    Game loop for the pathfinder visualizer
+    :return: None
+    """
     # Initialize the grid
     g = Graph()
     # Game loop
     clock = pygame.time.Clock()
-    # Sentinel variable
-    run = True
-    while run:
+    while True:
 
         # Check for events
         for event in pygame.event.get():
@@ -396,5 +408,27 @@ def play():
         clock.tick(30)
 
 
+def instructions() -> None:
+    """
+    Prints out the instructions
+    :return: None
+    """
+    print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
+    print("|    Welcome to my Pathfinder Visualizer!!    |")
+    print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
+    print("|                 CONTROLS                    |")
+    print("|     L-MOUSECLICK + DRAG = ENABLE A WALL     |")
+    print("|     R-MOUSECLICK + DRAG = DISABLE A WALL    |")
+    print("|     SPACEBAR = Run Dijkstra's algorithm     |")
+    print("|           A = Run A-star algorithm          |")
+    print("|     S = Enable/disable a start position     |")
+    print("|     D = Enable/disable an end position      |")
+    print("|          C = Clear board completely         |")
+    print("|          V = Clear visualization            |")
+    print("|                   X = QUIT                  |")
+    print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
+
+
 if __name__ == '__main__':
+    instructions()
     play()
