@@ -15,7 +15,7 @@ pygame.display.set_icon(LOGO)
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 800
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
-COLORS = {"START": (10, 17, 114), "DEST": (88, 139, 174), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
+COLORS = {"START": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
 DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.002}
 # Global variables
@@ -111,7 +111,7 @@ class Graph(object):
                     if not self.dest_pos or self.dest_pos == (r, c):
                         node = self.nodes[r][c]
                         node.toggle_dest()
-                        node.force_color_change(COLORS["DEST"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
+                        node.force_color_change(COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
                         self.dest_pos = (r, c) if node.dest else None
 
     def draw(self, s):
@@ -216,7 +216,8 @@ class Graph(object):
             # Get the vertex with the minimum f-value and remove it from the frontier dict
             current_vertex = min(frontier, key=lambda t: frontier[t][0])
             fgh = frontier[current_vertex]
-            dist = fgh[0]
+            # The raw distance is the second value in the fgh tuple which is g
+            dist = fgh[1]
             del frontier[current_vertex]
 
             # If the current vertex is the destination break out of the loop
@@ -235,15 +236,16 @@ class Graph(object):
             for n in neighbors:
                 if n in found or ((n.r, n.c) in frontier and 1 + dist >= frontier[(n.r, n.c)][1]):
                     continue
-                else:
-                    h = abs(self.dest_pos[0] - n.r) + abs(self.dest_pos[1] - n.c)
-                    frontier[(n.r, n.c)] = (1 + dist + h, 1 + dist, h)
-                    prevs[(n.r, n.c)] = current_vertex
 
-                    # Draw the neighbor node
-                    time.sleep(DELAYS["A-STAR"])
-                    n.change_color(COLORS["FRONTIER"])
-                    n.draw(screen)
+                # Get heuristic value and use it
+                h = abs(self.dest_pos[0] - n.r) + abs(self.dest_pos[1] - n.c)
+                frontier[(n.r, n.c)] = (1 + dist + h, 1 + dist, h)
+                prevs[(n.r, n.c)] = current_vertex
+
+                # Draw the neighbor node
+                time.sleep(DELAYS["A-STAR"])
+                n.change_color(COLORS["FRONTIER"])
+                n.draw(screen)
 
         # Initiate backtracking
         self.backtrack(prevs)
@@ -300,7 +302,7 @@ class Node(object):
         global drag
         global clear_drag
         # Check if there is a mouse click directly on one of the nodes
-        if event.type == pygame.MOUSEBUTTONDOWN and not (self.start or self.dest) and self.rect.collidepoint(pygame.mouse.get_pos()):
+        if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == pygame.BUTTON_LEFT:
                 # If the mouse button was the left button enable wall status for the selected node
                 drag = True
