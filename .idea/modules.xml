@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Dijkstra's_Visualizer.iml" filepath="$PROJECT_DIR$/.idea/Dijkstra's_Visualizer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/VPath.iml" filepath="$PROJECT_DIR$/.idea/VPath.iml" />
     </modules>
   </component>
 </project>
