@@ -3,6 +3,8 @@
 # by Furkan Ercevik
 # Started 4 November 2021
 #
+# TODO: Add maze saving and loading feature and two-sourced A-star
+import itertools
 import time
 import pygame
 import sys
@@ -22,6 +24,21 @@ DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.008}
 drag = False
 clear_drag = False
 reached = False
+
+
+def time_it(method):
+    """
+    Timing decorator that outputs how long an algorithm takes to find or not find a path
+    :return: wrapper function
+    """
+
+    def wrapper_time_it(self):
+        start_time = time.time()
+        method(self)
+        print("", end="\r")
+        print(f"The search algorithm took {time.time() - start_time:.2f} seconds", end="")
+
+    return wrapper_time_it
 
 
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
@@ -46,19 +63,6 @@ class Graph(object):
             self.nodes.append(row)
             x = 0
             y += 25
-
-    def time_it(func):
-        """
-        Timing decorator
-        :return: wrapper function
-        """
-        def wrapper_time_it(self):
-            start_time = time.time()
-            func(self)
-            print("", end="\r")
-            print(f"The search algolrithm took {time.time() - start_time:.2f} seconds to find a path", end="")
-
-        return wrapper_time_it
 
     def clear_graph(self) -> None:
         """
@@ -110,14 +114,15 @@ class Graph(object):
                 self.clear_visualization()
             if event.key == pygame.K_s:
                 x, y = pygame.mouse.get_pos()
-                if x in range(0, 1025) and y in range(0,1025):
+                if x in range(0, 1025) and y in range(0, 1025):
                     r = y // 25
                     c = x // 25
-                    if not self.start_pos or self.start_pos == (r,c):
+                    if not self.start_pos or self.start_pos == (r, c):
                         node = self.nodes[r][c]
                         node.toggle_start()
                         self.start_pos = (r, c) if node.start else None
-                        node.force_color_change(COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
+                        node.force_color_change(
+                            COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
             if event.key == pygame.K_d:
                 x, y = pygame.mouse.get_pos()
                 if x in range(0, 1025) and y in range(0, 1025):
@@ -126,7 +131,8 @@ class Graph(object):
                     if not self.dest_pos or self.dest_pos == (r, c):
                         node = self.nodes[r][c]
                         node.toggle_dest()
-                        node.force_color_change(COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
+                        node.force_color_change(
+                            COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
                         self.dest_pos = (r, c) if node.dest else None
 
     def draw(self, s):
@@ -168,12 +174,11 @@ class Graph(object):
             # Get the vertex with the lowest cost
             dist, current_vertex = pq.get()
             node = self.nodes[current_vertex[0]][current_vertex[1]]
-            node.change_color(COLORS["FOUND"])
-            node.draw(screen)
+            self.draw_updated_node(COLORS["FOUND"], node)
             if current_vertex == self.dest_pos:
                 break
             # Check if it is a wall and if so skip over it
-            if self.nodes[current_vertex[0]][current_vertex[1]].wall_status():
+            if node.wall_status():
                 continue
             # Get the neighbors of the current node and iterate over them
             neighbors = self.get_adj_nodes(current_vertex[0], current_vertex[1])
@@ -184,9 +189,7 @@ class Graph(object):
                 # the new distance cost
                 if new_distance < old_distance:
                     # Update the color of the neighbor
-                    time.sleep(DELAYS["DIJKSTRA"])
-                    neighbor.change_color(COLORS["FRONTIER"])
-                    neighbor.draw(screen)
+                    self.draw_updated_node(COLORS["FRONTIER"], neighbor)
                     # Update the fastest route of the neighbor
                     prevs[(neighbor.r, neighbor.c)] = current_vertex
 
@@ -196,6 +199,7 @@ class Graph(object):
         # Backtrack from destination node
         self.backtrack(prevs, self.dest_pos)
 
+    @time_it
     def double_dijkstra(self):
         """
         Creates two pairs of dictionaries: one pair of the distances and of the preceding nodes for each respective node
@@ -234,17 +238,15 @@ class Graph(object):
         inters = None
 
         # While the priority queue is not empty
-        while not pq_s.empty() or not pq_d.empty():
+        while not pq_s.empty() and not pq_d.empty():
             # Get the vertex with the lowest cost from each of the queues
             dist, current_vertex = pq_s.get()
             node = self.nodes[current_vertex[0]][current_vertex[1]]
-            node.change_color(COLORS["FOUND"])
-            node.draw(screen)
+            self.draw_updated_node(COLORS["FOUND"], node)
 
             dist_2, current_vertex_2 = pq_d.get()
             node_2 = self.nodes[current_vertex_2[0]][current_vertex_2[1]]
-            node_2.change_color(COLORS["FOUND"])
-            node_2.draw(screen)
+            self.draw_updated_node(COLORS["FOUND"], node_2)
 
             # Check if it is a wall and if so skip over it
             if node.wall_status() or node_2.wall_status():
@@ -253,37 +255,28 @@ class Graph(object):
             neighbors_s = self.get_adj_nodes(current_vertex[0], current_vertex[1])
             neighbors_d = self.get_adj_nodes(current_vertex_2[0], current_vertex_2[1])
 
-            for neighbor in neighbors_s:
-                old_distance = dists_s[(neighbor.r, neighbor.c)]
-                new_distance = dist + 1
+            for neighbor_s, neighbor_d in itertools.zip_longest(neighbors_s, neighbors_d):
+
+                diffs = [dist + 1 - dists_s[(neighbor_s.r, neighbor_s.c)] if neighbor_s else 0,
+                         dist_2 + 1 - dists_d[(neighbor_d.r, neighbor_d.c)] if neighbor_d else 0]
+
                 # If the new distance is smaller than the original cost put the neighbor in the priority queue with
                 # the new distance cost
-                if new_distance < old_distance:
+                if diffs[0] < 0:
                     # Update the color of the neighbor
-                    time.sleep(DELAYS["DIJKSTRA"])
-                    neighbor.change_color(COLORS["FRONTIER"])
-                    neighbor.draw(screen)
+                    self.draw_updated_node(COLORS["FRONTIER"], neighbor_s)
                     # Update the fastest route of the neighbor
-                    prevs[(neighbor.r, neighbor.c)] = current_vertex
+                    prevs[(neighbor_s.r, neighbor_s.c)] = current_vertex
+                    pq_s.put((dist + 1, (neighbor_s.r, neighbor_s.c)))
+                    dists_s[(neighbor_s.r, neighbor_s.c)] = dist + 1
 
-                    pq_s.put((new_distance, (neighbor.r, neighbor.c)))
-                    dists_s[(neighbor.r, neighbor.c)] = new_distance
-
-            for neighbor in neighbors_d:
-                old_distance = dists_d[(neighbor.r, neighbor.c)]
-                new_distance = dist_2 + 1
-                # If the new distance is smaller than the original cost put the neighbor in the priority queue with
-                # the new distance cost
-                if new_distance < old_distance:
+                if diffs[1] < 0:
                     # Update the color of the neighbor
-                    time.sleep(DELAYS["DIJKSTRA"])
-                    neighbor.change_color(COLORS["FRONTIER"])
-                    neighbor.draw(screen)
+                    self.draw_updated_node(COLORS["FRONTIER"], neighbor_d)
                     # Update the fastest route of the neighbor
-                    succs[(neighbor.r, neighbor.c)] = current_vertex_2
-
-                    pq_d.put((new_distance, (neighbor.r, neighbor.c)))
-                    dists_d[(neighbor.r, neighbor.c)] = new_distance
+                    succs[(neighbor_d.r, neighbor_d.c)] = current_vertex_2
+                    pq_d.put((dist_2 + 1, (neighbor_d.r, neighbor_d.c)))
+                    dists_d[(neighbor_d.r, neighbor_d.c)] = dist_2 + 1
 
             # If the vertex from the priority queue starting at the destination exists in the dict of previous nodes
             # a shortest path can be found
@@ -293,58 +286,6 @@ class Graph(object):
 
         # Backtrack bidirectionally
         self.backtrack_2(prevs, succs, inters)
-
-    def backtrack_2(self, prevs: dict, succs: dict, inters: tuple) -> None:
-        """
-        Backtracks bidirectionally from an intersection point
-        :param prevs: dictionary containing parent nodes of nodes in the graph
-        :param succs: dictionary containing children nodes of nodes in the graph
-        :param inters: intersection point
-        :return: None
-        """
-        coors_s = prevs[inters]
-        coors_d = succs[inters]
-        # Draw the first node
-        node = self.nodes[inters[0]][inters[1]]
-        time.sleep(DELAYS["A-STAR"])
-        node.change_color(COLORS["PATH"])
-        node.draw(screen)
-
-        # Iterate over all the coordinates
-        while coors_s or coors_d:
-            if coors_d:
-                node = self.nodes[coors_d[0]][coors_d[1]]
-                time.sleep(DELAYS["A-STAR"])
-                node.change_color(COLORS["PATH"])
-                node.draw(screen)
-                coors_d = succs[coors_d]
-
-            if coors_s:
-                node = self.nodes[coors_s[0]][coors_s[1]]
-                time.sleep(DELAYS["A-STAR"])
-                node.change_color(COLORS["PATH"])
-                node.draw(screen)
-                coors_s = prevs[coors_s]
-
-    def get_adj_nodes(self, r, c) -> list:
-        """
-        Returns the adjacent nodes given a row and col index
-        :param r: row index
-        :param c: col index
-        :return: list of adjacent nodes
-        """
-        adjacent = []
-        possible_coors = [
-            (r+1, c), (r, c-1), (r, c+1), (r-1, c)
-        ]
-        for row, col in possible_coors:
-            if row in [-1, len(self.nodes)] or col in [-1, len(self.nodes)]:
-                continue
-            n = self.nodes[row][col]
-            if n.wall_status():
-                continue
-            adjacent.append(n)
-        return adjacent
 
     @time_it
     def a_star_solve(self):
@@ -379,8 +320,7 @@ class Graph(object):
             # Otherwise color the current node and add it to the found dict
             node = self.nodes[current_vertex[0]][current_vertex[1]]
             found[node] = dist
-            node.change_color(COLORS["FOUND"])
-            node.draw(screen)
+            self.draw_updated_node(COLORS["FOUND"], node)
 
             # Iterate over the max 4 neighbors of the current node and update the frontier and prevs dicts accordingly
             # # If a neighbor was already in frontier but the current route to it is faster update prevs and frontier
@@ -396,12 +336,29 @@ class Graph(object):
                 prevs[(n.r, n.c)] = current_vertex
 
                 # Draw the neighbor node
-                time.sleep(DELAYS["A-STAR"])
-                n.change_color(COLORS["FRONTIER"])
-                n.draw(screen)
-
+                self.draw_updated_node(COLORS["FRONTIER"], n)
         # Initiate backtracking
         self.backtrack(prevs, self.dest_pos)
+
+    def get_adj_nodes(self, r, c) -> list:
+        """
+        Returns the adjacent nodes given a row and col index
+        :param r: row index
+        :param c: col index
+        :return: list of adjacent nodes
+        """
+        adjacent = []
+        possible_coors = [
+            (r + 1, c), (r, c - 1), (r, c + 1), (r - 1, c)
+        ]
+        for row, col in possible_coors:
+            if row in [-1, len(self.nodes)] or col in [-1, len(self.nodes)]:
+                continue
+            n = self.nodes[row][col]
+            if n.wall_status():
+                continue
+            adjacent.append(n)
+        return adjacent
 
     def backtrack(self, d: dict, start_pos: tuple) -> None:
         """
@@ -417,6 +374,40 @@ class Graph(object):
             node.change_color(COLORS["PATH"])
             node.draw(screen)
             coors = d[coors]
+
+    def backtrack_2(self, prevs: dict, succs: dict, inters: tuple) -> None:
+        """
+        Backtracks bidirectionally from an intersection point
+        :param prevs: dictionary containing parent nodes of nodes in the graph
+        :param succs: dictionary containing children nodes of nodes in the graph
+        :param inters: intersection point
+        :return: None
+        """
+        try:
+            coors_s = prevs[inters]
+            coors_d = succs[inters]
+        except KeyError:
+            return
+
+        # Draw the first node
+        n = self.nodes[inters[0]][inters[1]]
+        self.draw_updated_node(COLORS["PATH"], n)
+
+        # Iterate over all the coordinates
+        while coors_s or coors_d:
+            if coors_d:
+                self.draw_updated_node(COLORS["PATH"], node=None, r=coors_d[0], c=coors_d[1])
+                coors_d = succs[coors_d]
+
+            if coors_s:
+                self.draw_updated_node(COLORS["PATH"], node=None, r=coors_s[0], c=coors_s[1])
+                coors_s = prevs[coors_s]
+
+    def draw_updated_node(self, color, node=None, r=None, c=None):
+        node = self.nodes[r][c] if not node else node
+        time.sleep(DELAYS["A-STAR"])
+        node.change_color(color)
+        node.draw(screen)
 
 
 def handle_event(event: pygame.event) -> None:
@@ -446,6 +437,7 @@ class Node(object):
     The Node class will be used to handle the events of clicks, to generate walls, to signify if a node will be a
     destination, to store the least "costly" path
     """
+
     def __init__(self, r: int, c: int, x: float, y: float, width: float, height: float):
         """
         Creates a node object
@@ -486,7 +478,7 @@ class Node(object):
 
         if self.sq_color == COLORS["FRONTIER"]:
             # If the square is a "frontier" square draw a circle in that cell
-            pygame.draw.circle(s, self.sq_color, (self.x + self.w//2, self.y + self.h//2), 8)
+            pygame.draw.circle(s, self.sq_color, (self.x + self.w // 2, self.y + self.h // 2), 8)
         else:
             pygame.draw.rect(s, self.sq_color, self.rect)
         pygame.display.update(self.rect)
