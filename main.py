@@ -24,8 +24,6 @@ clear_drag = False
 reached = False
 
 
-
-
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
 class Graph(object):
 
@@ -57,7 +55,8 @@ class Graph(object):
         def wrapper_time_it(self):
             start_time = time.time()
             func(self)
-            print(f"The search algorithm took {time.time() - start_time} seconds to find a path")
+            print("", end="\r")
+            print(f"The search algolrithm took {time.time() - start_time:.2f} seconds to find a path", end="")
 
         return wrapper_time_it
 
@@ -169,6 +168,8 @@ class Graph(object):
             node = self.nodes[current_vertex[0]][current_vertex[1]]
             node.change_color(COLORS["FOUND"])
             node.draw(screen)
+            if current_vertex == self.dest_pos:
+                break
             # Check if it is a wall and if so skip over it
             if self.nodes[current_vertex[0]][current_vertex[1]].wall_status():
                 continue
