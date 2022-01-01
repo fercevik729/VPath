@@ -17,11 +17,13 @@ screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
 COLORS = {"START": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
-DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.002}
+DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.008}
 # Global variables
 drag = False
 clear_drag = False
 reached = False
+
+
 
 
 # The Graph class will be used to organize all the Node objects in one place and simulate the visualization process
@@ -46,6 +48,18 @@ class Graph(object):
             self.nodes.append(row)
             x = 0
             y += 25
+
+    def time_it(func):
+        """
+        Timing decorator
+        :return: wrapper function
+        """
+        def wrapper_time_it(self):
+            start_time = time.time()
+            func(self)
+            print(f"The search algorithm took {time.time() - start_time} seconds to find a path")
+
+        return wrapper_time_it
 
     def clear_graph(self) -> None:
         """
@@ -124,6 +138,7 @@ class Graph(object):
             for n in row:
                 n.draw(s)
 
+    @time_it
     def dijkstra_solve(self) -> bool:
         """
         Creates two lists: one of the distances and of the preceding nodes for each respective node
@@ -198,6 +213,7 @@ class Graph(object):
             adjacent.append(n)
         return adjacent
 
+    @time_it
     def a_star_solve(self):
         """
         Using heuristics, this method solves the graph and calls a helper function to backtrack from the solution
