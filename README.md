@@ -1,5 +1,6 @@
 # VPath
-This is a simple pathfinder visualization program that utilizes Dijkstra's algorithm and the optimized A* algorithm to display the shortest possible path to a destination node from a starting node.
+This is a simple pathfinder visualization program that utilizes a single and double-sourced Dijkstra's algorithm, optimized A* algorithm to display the shortest possible path to a destination node from a starting node.
+
 
 ## Background
 ### **Dijkstra's Algorithm**
@@ -34,11 +35,18 @@ play()
 ### User made maze
 ![maze.png](demo/maze.png)
 
-### **Dijkstra's algorithm**
+### **Dijkstra's algorithm (single)**
 ### In Progress
 ![in_progress.png](demo/in_progress.png)
 ### Finished
 ![finished.png](demo/finished.png)
+
+### **Dijkstra's algorithm (double)**
+### In Progress
+![ddinprogress.png](demo/ddinprogress.png)
+
+### Finished
+![ddfinished.png](demo/ddfinished.png)
 
 ### **A-star algorithm**
 ### In Progress

@@ -100,6 +100,8 @@ class Graph(object):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_c:
                 self.clear_graph()
+            if event.key == pygame.K_e:
+                self.double_dijkstra()
             if event.key == pygame.K_SPACE:
                 self.dijkstra_solve()
             if event.key == pygame.K_a:
@@ -138,9 +140,9 @@ class Graph(object):
                 n.draw(s)
 
     @time_it
-    def dijkstra_solve(self) -> bool:
+    def dijkstra_solve(self):
         """
-        Creates two lists: one of the distances and of the preceding nodes for each respective node
+        Creates two dictionarieis: one of the distances and of the preceding nodes for each respective node
         and backtracks to find the shortest path
         :return: True if a path could be found, otherwise False
         """
@@ -192,7 +194,137 @@ class Graph(object):
                     dists[(neighbor.r, neighbor.c)] = new_distance
 
         # Backtrack from destination node
-        self.backtrack(prevs)
+        self.backtrack(prevs, self.dest_pos)
+
+    def double_dijkstra(self):
+        """
+        Creates two pairs of dictionaries: one pair of the distances and of the preceding nodes for each respective node
+        and another pair of distances from the destination position and succeeding nodes
+        :return: True if a path could be found, otherwise False
+        """
+        # Start solving from the start_position
+        # Once the destination is reached, map the shortest route in red color
+        if not self.start_pos or not self.dest_pos:
+            return
+        # Create a dictionary of all the distances from start_pos
+        # Create a dictionary of all the distances from dest_pos
+        # Create a dictionary of all the previous nodes
+        # Create a dictionary of all the succeeding nodes
+        dists_s = {}
+        dists_d = {}
+        prevs = {}
+        succs = {}
+
+        for r, row in enumerate(self.nodes):
+            for c, col in enumerate(row):
+                dists_s[(r, c)] = float('inf')
+                dists_d[(r, c)] = float('inf')
+                prevs[(r, c)] = None
+                succs[(r, c)] = None
+
+        dists_s[self.start_pos] = 0
+        dists_d[self.dest_pos] = 0
+        # Start the priority queues
+        pq_s = PriorityQueue()
+        pq_s.put((0, self.start_pos))
+
+        pq_d = PriorityQueue()
+        pq_d.put((0, self.dest_pos))
+
+        inters = None
+
+        # While the priority queue is not empty
+        while not pq_s.empty() or not pq_d.empty():
+            # Get the vertex with the lowest cost from each of the queues
+            dist, current_vertex = pq_s.get()
+            node = self.nodes[current_vertex[0]][current_vertex[1]]
+            node.change_color(COLORS["FOUND"])
+            node.draw(screen)
+
+            dist_2, current_vertex_2 = pq_d.get()
+            node_2 = self.nodes[current_vertex_2[0]][current_vertex_2[1]]
+            node_2.change_color(COLORS["FOUND"])
+            node_2.draw(screen)
+
+            # Check if it is a wall and if so skip over it
+            if node.wall_status() or node_2.wall_status():
+                continue
+            # Get the neighbors of the current node and iterate over them
+            neighbors_s = self.get_adj_nodes(current_vertex[0], current_vertex[1])
+            neighbors_d = self.get_adj_nodes(current_vertex_2[0], current_vertex_2[1])
+
+            for neighbor in neighbors_s:
+                old_distance = dists_s[(neighbor.r, neighbor.c)]
+                new_distance = dist + 1
+                # If the new distance is smaller than the original cost put the neighbor in the priority queue with
+                # the new distance cost
+                if new_distance < old_distance:
+                    # Update the color of the neighbor
+                    time.sleep(DELAYS["DIJKSTRA"])
+                    neighbor.change_color(COLORS["FRONTIER"])
+                    neighbor.draw(screen)
+                    # Update the fastest route of the neighbor
+                    prevs[(neighbor.r, neighbor.c)] = current_vertex
+
+                    pq_s.put((new_distance, (neighbor.r, neighbor.c)))
+                    dists_s[(neighbor.r, neighbor.c)] = new_distance
+
+            for neighbor in neighbors_d:
+                old_distance = dists_d[(neighbor.r, neighbor.c)]
+                new_distance = dist_2 + 1
+                # If the new distance is smaller than the original cost put the neighbor in the priority queue with
+                # the new distance cost
+                if new_distance < old_distance:
+                    # Update the color of the neighbor
+                    time.sleep(DELAYS["DIJKSTRA"])
+                    neighbor.change_color(COLORS["FRONTIER"])
+                    neighbor.draw(screen)
+                    # Update the fastest route of the neighbor
+                    succs[(neighbor.r, neighbor.c)] = current_vertex_2
+
+                    pq_d.put((new_distance, (neighbor.r, neighbor.c)))
+                    dists_d[(neighbor.r, neighbor.c)] = new_distance
+
+            # If the vertex from the priority queue starting at the destination exists in the dict of previous nodes
+            # a shortest path can be found
+            if prevs[current_vertex_2]:
+                inters = current_vertex_2
+                break
+
+        # Backtrack bidirectionally
+        self.backtrack_2(prevs, succs, inters)
+
+    def backtrack_2(self, prevs: dict, succs: dict, inters: tuple) -> None:
+        """
+        Backtracks bidirectionally from an intersection point
+        :param prevs: dictionary containing parent nodes of nodes in the graph
+        :param succs: dictionary containing children nodes of nodes in the graph
+        :param inters: intersection point
+        :return: None
+        """
+        coors_s = prevs[inters]
+        coors_d = succs[inters]
+        # Draw the first node
+        node = self.nodes[inters[0]][inters[1]]
+        time.sleep(DELAYS["A-STAR"])
+        node.change_color(COLORS["PATH"])
+        node.draw(screen)
+
+        # Iterate over all the coordinates
+        while coors_s or coors_d:
+            if coors_d:
+                node = self.nodes[coors_d[0]][coors_d[1]]
+                time.sleep(DELAYS["A-STAR"])
+                node.change_color(COLORS["PATH"])
+                node.draw(screen)
+                coors_d = succs[coors_d]
+
+            if coors_s:
+                node = self.nodes[coors_s[0]][coors_s[1]]
+                time.sleep(DELAYS["A-STAR"])
+                node.change_color(COLORS["PATH"])
+                node.draw(screen)
+                coors_s = prevs[coors_s]
 
     def get_adj_nodes(self, r, c) -> list:
         """
@@ -269,22 +401,22 @@ class Graph(object):
                 n.draw(screen)
 
         # Initiate backtracking
-        self.backtrack(prevs)
+        self.backtrack(prevs, self.dest_pos)
 
-    def backtrack(self, prevs: dict) -> None:
+    def backtrack(self, d: dict, start_pos: tuple) -> None:
         """
         Draws out the route from the dest_pos to the start_pos using a dict
-        :param prevs: dict of parent nodes for each node in the graph
+        :param d: dict of parent nodes for each node in the graph
+        :param start_pos: tuple of starting position to backtrack from
         :return: None
         """
-        coors = prevs[self.dest_pos]
+        coors = d[start_pos]
         while coors:
             node = self.nodes[coors[0]][coors[1]]
-            node.draw(screen)
-            time.sleep(.04)
+            time.sleep(DELAYS["A-STAR"])
             node.change_color(COLORS["PATH"])
             node.draw(screen)
-            coors = prevs[coors]
+            coors = d[coors]
 
 
 def handle_event(event: pygame.event) -> None:
@@ -444,6 +576,7 @@ def instructions() -> None:
     print("|     L-MOUSECLICK + DRAG = ENABLE A WALL     |")
     print("|     R-MOUSECLICK + DRAG = DISABLE A WALL    |")
     print("|     SPACEBAR = Run Dijkstra's algorithm     |")
+    print("|      E = Run Double-Dijkstra's algorithm    |")
     print("|           A = Run A-star algorithm          |")
     print("|     S = Enable/disable a start position     |")
     print("|     D = Enable/disable an end position      |")
