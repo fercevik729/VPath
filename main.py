@@ -5,6 +5,9 @@
 #
 # TODO: Add maze saving and loading feature and two-sourced A-star
 import itertools
+import os
+from pathlib import Path
+from pathlib import PurePath
 import time
 import pygame
 import sys
@@ -19,11 +22,10 @@ screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Pathfinder Visualizer")
 COLORS = {"START": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
-DELAYS = {"A-STAR": 0.008, "DIJKSTRA": 0.008}
+DELAY = 0.008
 # Global variables
 drag = False
 clear_drag = False
-reached = False
 
 
 def time_it(method):
@@ -69,6 +71,7 @@ class Graph(object):
         Clears the graph to its original state
         :return:
         """
+        self.clear_visualization()
         self.start_pos = None
         self.dest_pos = None
         for r, row in enumerate(self.nodes):
@@ -80,8 +83,6 @@ class Graph(object):
                     n.toggle_start()
                 if n.wall_status():
                     n.toggle_wall()
-
-                n.force_color_change(COLORS["WHITE"])
 
     def clear_visualization(self) -> None:
         """
@@ -100,18 +101,26 @@ class Graph(object):
         :param event:
         :return:
         """
-        # Make the node a start or destination node
         if event.type == pygame.KEYDOWN:
+            # Save the maze
+            if event.key == pygame.K_m:
+                self.save_maze()
+            if event.key in range(49, 58):
+                self.load_maze(event.key - 48)
+            # Clear graph
             if event.key == pygame.K_c:
                 self.clear_graph()
+            # Call one of the search algorithms
             if event.key == pygame.K_e:
                 self.double_dijkstra()
             if event.key == pygame.K_SPACE:
                 self.dijkstra_solve()
             if event.key == pygame.K_a:
                 self.a_star_solve()
+            # Clear visualization
             if event.key == pygame.K_v:
                 self.clear_visualization()
+            # Make the node a start node
             if event.key == pygame.K_s:
                 x, y = pygame.mouse.get_pos()
                 if x in range(0, 1025) and y in range(0, 1025):
@@ -121,8 +130,7 @@ class Graph(object):
                         node = self.nodes[r][c]
                         node.toggle_start()
                         self.start_pos = (r, c) if node.start else None
-                        node.force_color_change(
-                            COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
+            # Make the node a destination node
             if event.key == pygame.K_d:
                 x, y = pygame.mouse.get_pos()
                 if x in range(0, 1025) and y in range(0, 1025):
@@ -131,8 +139,6 @@ class Graph(object):
                     if not self.dest_pos or self.dest_pos == (r, c):
                         node = self.nodes[r][c]
                         node.toggle_dest()
-                        node.force_color_change(
-                            COLORS["START"] if node.sq_color == COLORS["WHITE"] else COLORS["WHITE"])
                         self.dest_pos = (r, c) if node.dest else None
 
     def draw(self, s):
@@ -148,10 +154,12 @@ class Graph(object):
     @time_it
     def dijkstra_solve(self):
         """
-        Creates two dictionarieis: one of the distances and of the preceding nodes for each respective node
+        Creates two dictionaries: one of the distances and of the preceding nodes for each respective node
         and backtracks to find the shortest path
         :return: True if a path could be found, otherwise False
         """
+        self.clear_visualization()
+        self.draw(screen)
         # Start solving from the start_position
         # Once the destination is reached, map the shortest route in red color
         if not self.start_pos or not self.dest_pos:
@@ -206,14 +214,14 @@ class Graph(object):
         and another pair of distances from the destination position and succeeding nodes
         :return: True if a path could be found, otherwise False
         """
+        self.clear_visualization()
+        self.draw(screen)
         # Start solving from the start_position
         # Once the destination is reached, map the shortest route in red color
         if not self.start_pos or not self.dest_pos:
             return
-        # Create a dictionary of all the distances from start_pos
-        # Create a dictionary of all the distances from dest_pos
-        # Create a dictionary of all the previous nodes
-        # Create a dictionary of all the succeeding nodes
+        # Create dictionaries of all the distances from start_pos and dest_pos
+        # Create dictionaries of all the previous and succeeding nodes
         dists_s = {}
         dists_d = {}
         prevs = {}
@@ -293,6 +301,9 @@ class Graph(object):
         Using heuristics, this method solves the graph and calls a helper function to backtrack from the solution
         :return:
         """
+        self.clear_visualization()
+        self.draw(screen)
+
         # If there is no start or end node specified return False
         if not self.start_pos or not self.dest_pos:
             return False
@@ -370,7 +381,7 @@ class Graph(object):
         coors = d[start_pos]
         while coors:
             node = self.nodes[coors[0]][coors[1]]
-            time.sleep(DELAYS["A-STAR"])
+            time.sleep(DELAY)
             node.change_color(COLORS["PATH"])
             node.draw(screen)
             coors = d[coors]
@@ -403,11 +414,73 @@ class Graph(object):
                 self.draw_updated_node(COLORS["PATH"], node=None, r=coors_s[0], c=coors_s[1])
                 coors_s = prevs[coors_s]
 
-    def draw_updated_node(self, color, node=None, r=None, c=None):
+    def draw_updated_node(self, color: tuple, node=None, r=None, c=None) -> None:
+        """
+        Changes the color of a node and updates it
+        :param color: tuple representing the color for the node to change to
+        :param node: node to be modified
+        :param r: row coordinates, in case a node is not provided
+        :param c: col coordinates, in case a node is not provided
+        :return: None
+        """
         node = self.nodes[r][c] if not node else node
-        time.sleep(DELAYS["A-STAR"])
+        time.sleep(DELAY)
         node.change_color(color)
         node.draw(screen)
+
+    def save_maze(self) -> None:
+        """
+        Saves the current graph as a maze{n}.txt file in the mazes directory
+        :return: None
+        """
+        path = PurePath.joinpath(Path.cwd(), 'mazes')
+        num = min(len([n for n in os.listdir(path)]) + 1, 9)
+        filename = PurePath.joinpath(path, f"maze{num}.txt")
+
+        with open(filename, 'w') as f:
+            for row in self.nodes:
+                for node in row:
+                    # If the node is a wall type a 1 in the maze file,
+                    # 2 if it is a starting position, 3 if it's a dest position
+                    # and 0 if its empty
+                    if node.wall_status():
+                        val = 1
+                    elif node.start:
+                        val = 2
+                    elif node.dest:
+                        val = 3
+                    else:
+                        val = 0
+                    f.write(f"{val}")
+                f.write("\n")
+
+    def load_maze(self, num: int) -> None:
+        """
+        Loads a saved maze from the mazes folder
+        :param num:
+        :return: None
+        """
+        self.clear_graph()
+        filename = PurePath.joinpath(Path.cwd(), f'mazes/maze{num}.txt')
+        try:
+            with open(filename, 'r') as f:
+                for i, line in enumerate(f):
+                    for j, dig in enumerate(line):
+                        if dig == "\n":
+                            continue
+                        n = self.nodes[i][j]
+                        dig = int(dig)
+                        if dig == 1:
+                            n.toggle_wall()
+                        elif dig == 2:
+                            self.start_pos = (i, j)
+                            n.toggle_start()
+                        elif dig == 3:
+                            n.toggle_dest()
+                            self.dest_pos = (i, j)
+                        n.draw(screen)
+        except FileNotFoundError:
+            print(f"You don't have a maze{num}.txt file")
 
 
 def handle_event(event: pygame.event) -> None:
@@ -492,14 +565,6 @@ class Node(object):
         if not (self.start or self.dest):
             self.sq_color = color
 
-    def force_color_change(self, color: tuple) -> None:
-        """
-        Changes the color of a Node object regardless of if it is the destination or starting Node
-        :param color: 3 digit tuple representing RGB value
-        :return: None
-        """
-        self.sq_color = color
-
     def wall_status(self):
         """
         Returns if the Node is a wall
@@ -513,6 +578,7 @@ class Node(object):
         :return: None
         """
         self.start = not self.start
+        self.sq_color = COLORS["START"] if self.sq_color == COLORS["WHITE"] else COLORS["WHITE"]
 
     def toggle_dest(self) -> None:
         """
@@ -520,9 +586,11 @@ class Node(object):
         :return: None
         """
         self.dest = not self.dest
+        self.sq_color = COLORS["START"] if self.sq_color == COLORS["WHITE"] else COLORS["WHITE"]
 
     def toggle_wall(self):
         self.is_wall = not self.is_wall
+        self.sq_color = COLORS["BLACK"] if self.sq_color == COLORS["WHITE"] else COLORS["WHITE"]
 
 
 def play() -> None:
