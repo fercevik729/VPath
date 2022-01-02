@@ -1,7 +1,7 @@
 # VPath
 This is an interactive and sleek pathfinder visualization program that utilizes a single and double-sourced Dijkstra's algorithm as well as the optimized A* algorithm to display the shortest possible path to a destination node from a starting node. 
 
-Start and destination nodes are selected by the user, as well as wall nodes that they can use to develop mazes. For those who want to see VPath in action without making a comprehensive labyrinth of walls they can feel free to press any number from 1-9 to load a premade maze. Users also have the option to save mazes, but this can only be done by pressing the designated "save maze" key and waiting until after the program to designate what number and file to attribute to the maze, since the program is run within a single thread of execution. Further instructions and demonstrations can be found down below.
+Start and destination nodes are selected by the user, as well as wall nodes that they can use to develop mazes. For those who want to see VPath in action without making a comprehensive labyrinth of walls they can feel free to press any number from 1-9 to load a premade maze. Users also have the option to save mazes, but this can only be done by pressing the designated "save maze" key and waiting until after the program to designate what number and file to attribute to the maze, since the program is run within a single thread of execution. Further instructions and demonstrations can be found down below. Algorithm runtimes are also outputted in the terminal by default after each pathfinding execution, however they can be turned off by removing their decorators.
 
 ## Background
 ### **Dijkstra's Algorithm**
@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ```python
 # import play function from the VPath module
-from VPath import play
+from game import play
 
 # Plays the visualizer
 play()
@@ -55,3 +55,10 @@ play()
 
 ### Finished
 ![a-star_finished.png](demo/a-star_finished.png)
+
+## Usage tips
+* It is recommended to avoid pressing multiple keys during the solving phase as it will queue up the instructions and execute them after the solving phase immediately unless that is what is intended by the user.
+* In the event the game freezes simply quit the program and try restarting as this can happen when too many keys are pressed
+* The color of the pathfinder can be modified by changing the COLORS dictionary at the top of game.py
+* The delay of the pathfinder can also be reduced by changing DELAY at the top of game.py
+* To deselect a start/destination node be sure to hover over them directly
