@@ -55,3 +55,10 @@ play()
 
 ### Finished
 ![a-star_finished.png](demo/a-star_finished.png)
+
+## Usage tips
+* It is recommended to avoid pressing multiple keys during the solving phase as it will queue up the instructions and execute them after the solving phase immediately unless that is what is intended by the user.
+* In the event the game freezes simply quit the program and try restarting as this can happen when too many keys are pressed
+* The color of the pathfinder can be modified by changing the COLORS dictionary at the top of game.py
+* The delay of the pathfinder can also be reduced by changing DELAY at the top of game.py
+* To deselect a start/destination node be sure to hover over them directly
