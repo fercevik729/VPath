@@ -3,9 +3,8 @@
 # by Furkan Ercevik
 # Started 4 November 2021
 #
-# TODO: Add maze saving and loading feature and two-sourced A-star
+# TODO: two-sourced A-star
 import itertools
-import os
 from pathlib import Path
 from pathlib import PurePath
 import time
@@ -19,10 +18,10 @@ LOGO = pygame.image.load("assets/magnifying.png")
 pygame.display.set_icon(LOGO)
 SCREEN_WIDTH, SCREEN_HEIGHT = 1000, 800
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
-pygame.display.set_caption("Pathfinder Visualizer")
+pygame.display.set_caption("VPath - Pathfinder Visualizer")
 COLORS = {"START": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
-DELAY = 0.008
+DELAY = 0.004
 # Global variables
 drag = False
 clear_drag = False
