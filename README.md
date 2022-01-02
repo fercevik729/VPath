@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ```python
 # import play function from the VPath module
-from VPath import play
+from game import play
 
 # Plays the visualizer
 play()
