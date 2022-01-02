@@ -3,7 +3,6 @@
 # by Furkan Ercevik
 # Started 4 November 2021
 #
-# TODO: two-sourced A-star
 import itertools
 from pathlib import Path
 from pathlib import PurePath
