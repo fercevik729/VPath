@@ -28,6 +28,28 @@ drag = False
 clear_drag = False
 
 
+def handle_event(event: pygame.event) -> None:
+    """
+    Handles the mouseclick event specifically for a node object
+    :param event: a pygame event
+    :return: None
+    """
+    global drag
+    global clear_drag
+    # Check if there is a mouse click directly on one of the nodes
+    if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.button == pygame.BUTTON_LEFT:
+            # If the mouse button was the left button enable wall status for the selected node
+            drag = True
+        elif event.button == pygame.BUTTON_RIGHT:
+            # If the mouse button was the right button disable wall status for the selected node
+            clear_drag = True
+    # Check if the mouse is no longer clicked at which point drag is no longer true
+    if event.type == pygame.MOUSEBUTTONUP:
+        drag = False
+        clear_drag = False
+
+
 def time_it(method):
     """
     Timing decorator that outputs how long an algorithm takes to find or not find a path
@@ -434,7 +456,7 @@ class Graph(object):
         :return: None
         """
         path = PurePath.joinpath(Path.cwd(), 'mazes')
-        num = min(len([n for n in os.listdir(path)]) + 1, 9)
+        num = int(input("\nWhat number maze would you like this to be (1-9): "))
         filename = PurePath.joinpath(path, f"maze{num}.txt")
 
         with open(filename, 'w') as f:
@@ -481,28 +503,6 @@ class Graph(object):
                         n.draw(screen)
         except FileNotFoundError:
             print(f"You don't have a maze{num}.txt file")
-
-
-def handle_event(event: pygame.event) -> None:
-    """
-    Handles the mouseclick event specifically for a node object
-    :param event: a pygame event
-    :return: None
-    """
-    global drag
-    global clear_drag
-    # Check if there is a mouse click directly on one of the nodes
-    if event.type == pygame.MOUSEBUTTONDOWN:
-        if event.button == pygame.BUTTON_LEFT:
-            # If the mouse button was the left button enable wall status for the selected node
-            drag = True
-        elif event.button == pygame.BUTTON_RIGHT:
-            # If the mouse button was the right button disable wall status for the selected node
-            clear_drag = True
-    # Check if the mouse is no longer clicked at which point drag is no longer true
-    if event.type == pygame.MOUSEBUTTONUP:
-        drag = False
-        clear_drag = False
 
 
 class Node(object):
@@ -635,13 +635,15 @@ def instructions() -> None:
     print("|                 CONTROLS                    |")
     print("|     L-MOUSECLICK + DRAG = ENABLE A WALL     |")
     print("|     R-MOUSECLICK + DRAG = DISABLE A WALL    |")
-    print("|     SPACEBAR = Run Dijkstra's algorithm     |")
+    print("|     SPACE BAR = Run Dijkstra's algorithm    |")
     print("|      E = Run Double-Dijkstra's algorithm    |")
     print("|           A = Run A-star algorithm          |")
     print("|     S = Enable/disable a start position     |")
     print("|     D = Enable/disable an end position      |")
     print("|          C = Clear board completely         |")
     print("|          V = Clear visualization            |")
+    print("|          M = Save board as a maze file      |")
+    print("|    1 to 9 - Load a maze file into board     |")
     print("|                   X = QUIT                  |")
     print("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+")
 
