@@ -71,6 +71,7 @@ play()
 * The color of the pathfinder can be modified by changing the COLORS dictionary at the top of game.py
 * The delay of the pathfinder can also be reduced by changing DELAY at the top of game.py
 * To deselect a start/destination node be sure to hover over them directly
+* Make sure to fill out the input field in the console when prompted after opting to save the board as a maze file
 * Make sure pygame 2.0.2 or later is installed
 
 ## References
