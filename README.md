@@ -3,6 +3,8 @@ This is an interactive and sleek pathfinder visualization program that utilizes 
 
 Start and destination nodes are selected by the user, as well as wall nodes that they can use to develop mazes. For those who want to see VPath in action without making a comprehensive labyrinth of walls they can feel free to press any number from 1-9 to load a premade maze. Users also have the option to save mazes, but this can only be done by pressing the designated "save maze" key and waiting until after the program to designate what number and file to attribute to the maze, since the program is run within a single thread of execution. Further instructions and demonstrations can be found down below. Algorithm runtimes are also outputted in the terminal by default after each pathfinding execution, however they can be turned off by removing their decorators.
 
+Some challenges that came with developing this program were that it took time to make the process of drawing walls
+seamless and relatively smooth, to visualize the algorithms fluidly, and to create a "save and load maze" feature.
 ## Background
 ### **Dijkstra's Algorithm**
 
@@ -69,3 +71,11 @@ play()
 * The color of the pathfinder can be modified by changing the COLORS dictionary at the top of game.py
 * The delay of the pathfinder can also be reduced by changing DELAY at the top of game.py
 * To deselect a start/destination node be sure to hover over them directly
+* Make sure pygame 2.0.2 or later is installed
+
+## References
+https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+https://en.wikipedia.org/wiki/A*_search_algorithm
+https://brilliant.org/wiki/a-star-search/
+https://www.programiz.com/dsa/dijkstra-algorithm
+https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2

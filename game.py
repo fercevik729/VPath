@@ -51,11 +51,14 @@ class Graph(object):
         self.drag = False
         self.clear_drag = False
 
+        self.MAX_ROWS = 32
+        self.MAX_COLS = 40
+
         x = 0
         y = 5
-        for n in range(41):
+        for n in range(self.MAX_ROWS):
             row = []
-            for c in range(41):
+            for c in range(self.MAX_COLS):
                 row.append((Node(n, c, x, y, 20, 20)))
                 x += 25
             self.nodes.append(row)
@@ -479,7 +482,7 @@ class Graph(object):
             (r + 1, c), (r, c - 1), (r, c + 1), (r - 1, c)
         ]
         for row, col in possible_coors:
-            if row in [-1, len(self.nodes)] or col in [-1, len(self.nodes)]:
+            if row in [-1, self.MAX_ROWS] or col in [-1, self.MAX_COLS]:
                 continue
             n = self.nodes[row][col]
             if n.wall_status():
