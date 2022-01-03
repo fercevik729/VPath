@@ -82,4 +82,5 @@ play()
 * https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
 
 ## License
-This repository is licensed with an ![MIT](https://github.com/fercevik729/VPath/LICENSE) license.
+(c) Furkan T. Ercevik
+This repository is licensed with an ![MIT](LICENSE) license.
