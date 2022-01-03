@@ -49,12 +49,19 @@ play()
 ### Finished
 ![ddfinished.png](demo/ddfinished.png)
 
-### **A-star algorithm**
+### **A-star algorithm (single)**
 ### In Progress
 ![a-star_in_progress.png](demo/a-star_in_progress.png)
 
 ### Finished
 ![a-star_finished.png](demo/a-star_finished.png)
+
+### **A-star algorithm (double)**
+### In Progress
+![d_a-star_in_progress.png](demo/d_a-star_in_progress.png)
+
+### Finished
+![d_a-star_finished.png](demo/d_a-star_finished.png)
 
 ## Usage tips
 * It is recommended to avoid pressing multiple keys during the solving phase as it will queue up the instructions and execute them after the solving phase immediately unless that is what is intended by the user.
