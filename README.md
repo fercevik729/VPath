@@ -74,8 +74,8 @@ play()
 * Make sure pygame 2.0.2 or later is installed
 
 ## References
-> https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
-> https://en.wikipedia.org/wiki/A*_search_algorithm
-> https://brilliant.org/wiki/a-star-search/
-> https://www.programiz.com/dsa/dijkstra-algorithm
-> https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
+* https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+* https://en.wikipedia.org/wiki/A*_search_algorithm
+* https://brilliant.org/wiki/a-star-search/
+* https://www.programiz.com/dsa/dijkstra-algorithm
+* https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
