@@ -20,31 +20,6 @@ pygame.display.set_caption("VPath - Pathfinder Visualizer")
 COLORS = {"START": (10, 17, 114), "WHITE": (255, 255, 255), "BLACK": (0, 0, 0), "RED": (255, 0, 0),
           "FOUND": (72, 170, 173), "FRONTIER": (1, 96, 100), "PATH": (130, 238, 253)}
 DELAY = 0.004
-# Global variables
-drag = False
-clear_drag = False
-
-
-def handle_event(event: pygame.event) -> None:
-    """
-    Handles the mouseclick event specifically for a node object
-    :param event: a pygame event
-    :return: None
-    """
-    global drag
-    global clear_drag
-    # Check if there is a mouse click directly on one of the nodes
-    if event.type == pygame.MOUSEBUTTONDOWN:
-        if event.button == pygame.BUTTON_LEFT:
-            # If the mouse button was the left button enable wall status for the selected node
-            drag = True
-        elif event.button == pygame.BUTTON_RIGHT:
-            # If the mouse button was the right button disable wall status for the selected node
-            clear_drag = True
-    # Check if the mouse is no longer clicked at which point drag is no longer true
-    if event.type == pygame.MOUSEBUTTONUP:
-        drag = False
-        clear_drag = False
 
 
 def time_it(method):
@@ -73,6 +48,8 @@ class Graph(object):
         self.nodes = []
         self.dest_pos = None
         self.start_pos = None
+        self.drag = False
+        self.clear_drag = False
 
         x = 0
         y = 5
@@ -147,8 +124,9 @@ class Graph(object):
                 if x in range(0, 1025) and y in range(0, 1025):
                     r = y // 25
                     c = x // 25
-                    if not self.start_pos or self.start_pos == (r, c):
-                        node = self.nodes[r][c]
+                    node = self.nodes[r][c]
+                    if (not self.start_pos or self.start_pos == (r, c)) and not node.wall_status():
+                        self.clear_visualization()
                         node.toggle_start()
                         self.start_pos = (r, c) if node.start else None
             # Make the node a destination node
@@ -157,10 +135,43 @@ class Graph(object):
                 if x in range(0, 1025) and y in range(0, 1025):
                     r = y // 25
                     c = x // 25
-                    if not self.dest_pos or self.dest_pos == (r, c):
-                        node = self.nodes[r][c]
+                    node = self.nodes[r][c]
+                    if (not self.dest_pos or self.dest_pos == (r, c)) and not node.wall_status():
+                        self.clear_visualization()
                         node.toggle_dest()
                         self.dest_pos = (r, c) if node.dest else None
+
+        # Check for mouse clicks
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            x, y = pygame.mouse.get_pos()
+            if x in range(0, 1025) and y in range(0, 1025):
+                r = y // 25
+                c = x // 25
+                node = self.nodes[r][c]
+                if event.button == pygame.BUTTON_LEFT:
+                    if not node.wall_status() and not(node.start or node.dest):
+                        self.clear_visualization()
+                        node.toggle_wall()
+                    self.drag = True
+                    self.clear_drag = False
+                elif event.button == pygame.BUTTON_RIGHT:
+                    if node.wall_status():
+                        self.clear_visualization()
+                        node.toggle_wall()
+                    self.clear_drag = True
+                    self.drag = False
+        elif event.type == pygame.MOUSEBUTTONUP:
+            self.drag = False
+            self.clear_drag = False
+        elif event.type == pygame.MOUSEMOTION:
+            x, y = pygame.mouse.get_pos()
+            if x in range(0, 1025) and y in range(0, 1025):
+                r = y // 25
+                c = x // 25
+                n = self.nodes[r][c]
+                if (n.wall_status() and self.clear_drag) or (not n.wall_status() and self.drag and
+                                                             not (n.start or n.dest)):
+                    n.toggle_wall()
 
     def draw(self, s):
         """
@@ -622,15 +633,8 @@ class Node(object):
         :param s: pygame surface to draw on
         :return: None
         """
-        if drag and self.rect.collidepoint(pygame.mouse.get_pos()) and not (self.start or self.dest):
-            # If the drag variable is enabled, enable the wall status of this nodes
-            self.is_wall = True
+        if self.wall_status():
             self.sq_color = COLORS["BLACK"]
-
-        if clear_drag and self.rect.collidepoint(pygame.mouse.get_pos()) and not (self.start or self.dest):
-            # If the clear drag variable is enabled, disable the wall status of this nodes
-            self.is_wall = False
-            self.sq_color = COLORS["WHITE"]
 
         if self.sq_color == COLORS["FRONTIER"]:
             # If the square is a "frontier" square draw a circle in that cell
@@ -699,9 +703,6 @@ def play() -> None:
                 sys.exit()
             # Let the graph handle the event
             g.handle_event(event)
-
-            # Let the program statically handle the event
-            handle_event(event)
 
         g.draw(screen)
         clock.tick(30)
